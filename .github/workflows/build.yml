@@ -1,0 +1,114 @@
+name: Build installers
+
+# Builds the installers in the cloud, so nothing has to be installed on your own PC.
+# Run it from the "Actions" tab ("Run workflow"), or push a tag such as v1.0.0.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  windows:
+    name: Windows (Qt ${{ matrix.qt }})
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - qt: "5.15.2"          # Windows 7 / 8 / 8.1
+            major: "5"
+            modules: "qtwebengine"
+          - qt: "6.5.3"           # Windows 10 or later
+            major: "6"
+            modules: "qtwebengine qtwebchannel qtpositioning"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2019_64
+          modules: ${{ matrix.modules }}
+          cache: true
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\Inno Setup 6"
+      - name: Build
+        shell: cmd
+        run: build.bat "%QT_ROOT_DIR%" ${{ matrix.major }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mixdown-windows-qt${{ matrix.major }}
+          path: dist/*.exe
+
+  macos:
+    name: macOS (Qt 6.5)
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.5.3"
+          host: mac
+          target: desktop
+          arch: clang_64
+          modules: "qtwebengine qtwebchannel qtpositioning"
+          cache: true
+      - name: Build
+        run: QTDIR="$QT_ROOT_DIR" ./build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mixdown-macos
+          path: dist/*.dmg
+
+  linux:
+    name: Linux (deb, rpm, AppImage)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.5.3"
+          host: linux
+          target: desktop
+          arch: gcc_64
+          modules: "qtwebengine qtwebchannel qtpositioning"
+          cache: true
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm libfuse2 libgl1-mesa-dev libnss3 libxcomposite1 libxdamage1 \
+            libxrandr2 libxtst6 libasound2 libxkbfile1 libxkbcommon-x11-0 libxcb-cursor0
+      - name: Build
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: ./build.sh all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mixdown-linux
+          path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.AppImage
+
+  release:
+    name: Attach to GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*

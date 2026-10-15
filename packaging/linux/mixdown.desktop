@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Mixdown
+Comment=Markdown + LaTeX + CSS + JS markup editor
+Exec=mixdown %F
+Icon=mixdown
+Terminal=false
+Categories=Office;TextEditor;Utility;
+MimeType=text/x-mixdown;
+StartupWMClass=mixdown

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mixdown</title>
+<style>
+:root{--bg:#f6f6f4;--pn:#fff;--tx:#1d1d1b;--mu:#6b6b66;--bd:#dcdcd6;--ac:#3b5bdb;--cd:#efeee9;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161618;--pn:#202023;--tx:#ececea;--mu:#9a9a95;--bd:#34343a;--ac:#8ea2ff;--cd:#2b2b30;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161618;--pn:#202023;--tx:#ececea;--mu:#9a9a95;--bd:#34343a;--ac:#8ea2ff;--cd:#2b2b30;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:15px/1.6 system-ui,-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--bd);background:var(--pn)}
+header h1{font-size:16px;margin:0 8px 0 0}
+.tb{display:flex;flex-wrap:wrap;gap:4px}
+button{font:inherit;font-size:13px;padding:4px 9px;border:1px solid var(--bd);background:var(--pn);color:var(--tx);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--ac)}button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+main{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;height:calc(100vh - 56px)}
+@media(max-width:760px){main{grid-template-columns:1fr;height:auto}}
+.col{display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;gap:4px;margin-bottom:6px}
+
+.pane{flex:1;min-height:420px;overflow:auto;border:1px solid var(--bd);border-radius:8px;background:var(--pn);padding:16px 20px}
+#code{white-space:pre-wrap;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+#pv h1,#pv h2,#pv h3{line-height:1.25}
+#pv code{background:var(--cd);padding:1px 5px;border-radius:4px;font-size:.92em}
+#pv pre{background:var(--cd);padding:10px 12px;border-radius:6px;overflow-x:auto}#pv pre code{padding:0}
+#pv blockquote{margin:8px 0;padding:2px 12px;border-left:3px solid var(--ac);color:var(--mu)}
+#pv table{border-collapse:collapse}#pv td,#pv th{border:1px solid var(--bd);padding:4px 10px}
+#pv .mb{text-align:center;margin:10px 0;font-size:1.15em}
+#pv .m i{font-family:Georgia,"Times New Roman",serif}
+#pv .fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 2px;font-size:.95em}
+#pv .fr>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
+#pv .sq{border-top:1px solid currentColor;padding:0 2px}
+#pv .b{margin:2px 4px 2px 0}#pv .v{font-weight:700;color:var(--ac)}
+#pv input{font:inherit;padding:3px 6px;border:1px solid var(--bd);border-radius:5px;background:var(--bg);color:var(--tx)}
+.err{color:#d6336c;font-size:13px;margin:6px 0}
+.help td,.help th{border:1px solid var(--bd);padding:4px 8px;font-size:13px;vertical-align:top}.help table{border-collapse:collapse;width:100%}
+.help code{background:var(--cd);padding:1px 4px;border-radius:4px}
+.tabs .sp{margin-left:auto;display:flex;gap:4px}
+#opn{display:none;margin-left:auto}
+main.nopv{grid-template-columns:1fr}main.nopv #pvcol{display:none}main.nopv #opn{display:inline-block}
+#pvcol.fs{position:fixed;inset:0;z-index:50;background:var(--bg);padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));height:auto}
+#pvcol.fs .pane{min-height:0}
+#tb{gap:6px;align-items:flex-start}
+#tb2,#tb{flex-basis:100%}
+#dlg{position:fixed;inset:0;z-index:100;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px}#dlg[hidden]{display:none}
+#dlg .box{background:var(--pn);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:18px 20px;min-width:260px;max-width:100%}
+#dlg h2{margin:0 0 12px;font-size:16px}#dlg .hint{font-size:12px;color:var(--mu);margin-top:4px;max-width:300px}#dlg .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}#dlg .act{margin-top:16px;text-align:right}
+.grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:3px 6px;border:1px solid var(--bd);border-radius:8px}
+.gh{font-weight:700;border:0;background:transparent;padding:4px 6px}
+.gb{display:flex;flex-wrap:wrap;gap:4px}.gb[hidden]{display:none}
+html,body{height:100%}body{display:flex;flex-direction:column}main{flex:1;min-height:0;height:auto}
+@media(max-width:760px){html,body{height:auto}body{display:block}}
+#pv .lm{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.1;font-size:.9em}#pv .lm>span:nth-child(2){font-size:1.4em}
+#pv .tx{font-style:normal;font-family:system-ui,sans-serif}#pv .fr.nb>span:first-child{border:0}
+#pv .acc{position:relative;display:inline-block}#pv .acc::before{content:attr(data-a);position:absolute;top:-.6em;left:0;right:0;text-align:center;font-size:.8em}
+#pv .mx{display:inline-block;vertical-align:middle;padding:0 5px;margin:0 2px}#pv .mx.p{border-left:1px solid;border-right:1px solid;border-radius:10px}#pv .mx.b{border-left:2px solid;border-right:2px solid}#pv .mx td{border:0;padding:1px 7px;text-align:center}
+#pv mark{background:#ffe066aa;color:inherit;padding:0 2px}#pv .toc{list-style:none;padding:0;margin:8px 0}#pv li>input[type=checkbox]{margin-right:6px}
+
+:root{--t-cm:#008000;--t-hd:#0451a5;--t-dr:#af00db;--t-k:#0000ff;--t-s:#a31515;--t-n:#098658;--t-b:#267f99;--t-m:#795e26;--t-o:#5a5a5a;--t-vr:#001080;--t-mt:#a15c00;--t-mc:#0070c1;--t-cd:#a31515;--t-sp:#b45309;--t-sl:#800000;--t-cp:#e50000;--t-cv:#0451a5;--t-cw:#af00db;--t-ls:#0000ff;--t-bd:#7a3e00;--t-it:#6f42c1;--t-dl:#888888;--t-lk:#0070c1;--t-ex:#333333;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--t-cm:#6a9955;--t-hd:#569cd6;--t-dr:#c586c0;--t-k:#569cd6;--t-s:#ce9178;--t-n:#b5cea8;--t-b:#4ec9b0;--t-m:#dcdcaa;--t-o:#d4d4d4;--t-vr:#9cdcfe;--t-mt:#d7ba7d;--t-mc:#4fc1ff;--t-cd:#ce9178;--t-sp:#e0a56d;--t-sl:#d7ba7d;--t-cp:#9cdcfe;--t-cv:#4fc1ff;--t-cw:#c586c0;--t-ls:#569cd6;--t-bd:#e5c07b;--t-it:#c3a6ff;--t-dl:#888888;--t-lk:#4fc1ff;--t-ex:#dddddd;}}
+:root[data-theme="dark"]{--t-cm:#6a9955;--t-hd:#569cd6;--t-dr:#c586c0;--t-k:#569cd6;--t-s:#ce9178;--t-n:#b5cea8;--t-b:#4ec9b0;--t-m:#dcdcaa;--t-o:#d4d4d4;--t-vr:#9cdcfe;--t-mt:#d7ba7d;--t-mc:#4fc1ff;--t-cd:#ce9178;--t-sp:#e0a56d;--t-sl:#d7ba7d;--t-cp:#9cdcfe;--t-cv:#4fc1ff;--t-cw:#c586c0;--t-ls:#569cd6;--t-bd:#e5c07b;--t-it:#c3a6ff;--t-dl:#888888;--t-lk:#4fc1ff;--t-ex:#dddddd;}
+.t-cm{color:var(--t-cm)}.t-hd{color:var(--t-hd)}.t-dr{color:var(--t-dr)}.t-k{color:var(--t-k)}.t-s{color:var(--t-s)}.t-n{color:var(--t-n)}.t-b{color:var(--t-b)}.t-m{color:var(--t-m)}.t-o{color:var(--t-o)}.t-vr{color:var(--t-vr)}.t-mt{color:var(--t-mt)}.t-mc{color:var(--t-mc)}.t-cd{color:var(--t-cd)}.t-sp{color:var(--t-sp)}.t-sl{color:var(--t-sl)}.t-cp{color:var(--t-cp)}.t-cv{color:var(--t-cv)}.t-cw{color:var(--t-cw)}.t-ls{color:var(--t-ls)}.t-bd{color:var(--t-bd)}.t-it{color:var(--t-it)}.t-dl{color:var(--t-dl)}.t-lk{color:var(--t-lk)}.t-ex{color:var(--t-ex)}
+.t-mk{background:#ffd54f55}.t-lk{text-decoration:underline}.t-dl{text-decoration:line-through}
+#ed{flex:1;min-height:420px;overflow:auto;border:1px solid var(--bd);border-radius:8px;background:var(--pn)}
+#edin{position:relative;min-height:100%}
+.ed-t{font:13.5px/1.6 ui-monospace,Menlo,Consolas,monospace;padding:12px;margin:0;border:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;tab-size:2;letter-spacing:0;font-variant-ligatures:none;box-sizing:border-box;text-align:left}
+#hl{position:relative;min-height:420px;color:var(--tx);pointer-events:none}
+#mir{position:absolute;inset:0;visibility:hidden;pointer-events:none}
+textarea#src{position:absolute;inset:0;width:100%;height:100%;resize:none;outline:0;background:transparent;color:transparent;caret-color:var(--tx);overflow:hidden}
+textarea#src::selection{background:#3b82f666;color:transparent}
+#ac{position:absolute;z-index:20;min-width:240px;background:var(--pn);border:1px solid var(--bd);border-radius:6px;box-shadow:0 4px 14px #0004;font:13px/1.4 system-ui,sans-serif;overflow:hidden}#ac[hidden]{display:none}
+.ai{display:flex;gap:8px;align-items:center;padding:3px 8px;cursor:pointer}.ai.on{background:var(--cd);box-shadow:inset 2px 0 var(--ac)}
+.ak{width:16px;text-align:center;color:var(--ac);font-weight:700}.ad{margin-left:auto;color:var(--mu);font-size:12px}.al{font-family:ui-monospace,Menlo,Consolas,monospace}
+#dlg select{font:inherit;padding:3px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:30}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:31;background:var(--pn)}
+#mir,textarea#src,#dlg,#pvcol.fs{top:0;right:0;bottom:0;left:0}
+body::before{top:0;right:0;left:0}
+html.no-fg header>*,html.no-fg .tb>*,html.no-fg #tb>*,html.no-fg .tabs>*,html.no-fg .sp>*,html.no-fg .grp>*,html.no-fg .gb>*{margin-right:4px;margin-bottom:4px}
+html.no-fg .ai>*{margin-right:8px}html.no-fg #dlg .row>*{margin-right:14px}
+</style>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body>
+<header>
+<h1>Mixdown 편집기</h1>
+<div class="tb" id="tbt"></div>
+<div class="tb" id="tb"></div>
+<div class="tb" id="tb2"></div>
+</header>
+<main>
+<div class="col"><div class="tabs"><button class="on">편집</button><button id="opn">미리보기 열기</button></div><div id="ed"><div id="edin"><pre id="hl" class="ed-t" aria-hidden="true"></pre><pre id="mir" class="ed-t" aria-hidden="true"></pre><textarea id="src" class="ed-t" spellcheck="false"></textarea><div id="ac" hidden></div></div></div></div>
+<div class="col" id="pvcol"><div class="tabs" id="tabs"><button data-t="pv" class="on">미리보기</button><button data-t="code">HTML</button><button data-t="help">문법</button><span class="sp"><button id="fsb">전체화면</button><button id="cls">미리보기 닫기</button></span></div>
+<div class="pane" id="pane"><style id="us"></style><div id="pv"></div><div id="code" hidden></div><div id="help" class="help" hidden></div></div></div>
+</main>
+<script>
+(function(){try{const d=document.createElement('div');d.style.cssText='display:flex;flex-direction:column;row-gap:1px;position:absolute;visibility:hidden';d.innerHTML='<i></i><i></i>';document.body.append(d);const ok=d.scrollHeight===1;d.remove();if(!ok)document.documentElement.classList.add('no-fg')}catch(e){}})();
+const $=s=>document.querySelector(s);
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const NM='[A-Za-z_\\uAC00-\\uD7A3][\\w\\uAC00-\\uD7A3]*';
+
+/* ---------- Math (simplified LaTeX) ---------- */
+const G={alpha:'α',beta:'β',gamma:'γ',delta:'δ',epsilon:'ε',zeta:'ζ',eta:'η',theta:'θ',kappa:'κ',lambda:'λ',mu:'μ',nu:'ν',xi:'ξ',rho:'ρ',sigma:'σ',tau:'τ',phi:'φ',chi:'χ',psi:'ψ',omega:'ω',pi:'π',Gamma:'Γ',Delta:'Δ',Theta:'Θ',Lambda:'Λ',Pi:'Π',Sigma:'Σ',Phi:'Φ',Psi:'Ψ',Omega:'Ω',sum:'∑',prod:'∏',int:'∫',inf:'∞',infty:'∞',partial:'∂',nabla:'∇',times:'×',div:'÷',pm:'±',cdot:'·',circ:'∘',le:'≤',leq:'≤',ge:'≥',geq:'≥',ne:'≠',neq:'≠',approx:'≈',equiv:'≡',propto:'∝',in:'∈',notin:'∉',subset:'⊂',cup:'∪',cap:'∩',forall:'∀',exists:'∃',empty:'∅',to:'→',rightarrow:'→',leftarrow:'←',Rightarrow:'⇒',Leftrightarrow:'⇔',ldots:'…',cdots:'⋯',angle:'∠',degree:'°',therefore:'∴',perp:'⊥',oplus:'⊕',otimes:'⊗',quad:'\u2003'};
+const BB={R:'ℝ',N:'ℕ',Z:'ℤ',Q:'ℚ',C:'ℂ'},FN=/^(sin|cos|tan|cot|log|ln|exp|max|min|det|gcd|sup|dim)$/,ACC={hat:'^',vec:'→',bar:'¯',dot:'˙',tilde:'~'};
+const xs=e=>'<b class="v" data-e="'+(C.exprs.push(e)-1)+'"></b>';
+function eend(t,k){let d=0;for(let j=k;j<t.length;j++){if(t[j]==='{')d++;else if(t[j]==='}'&&--d===0)return j+1}return -1}
+function math(s){let i=0;
+ const atom=c=>/[a-zA-Z]/.test(c)?'<i>'+c+'</i>':esc(c);
+ const raw=()=>{if(s[i]!=='{')return '';let d=0,j=i;for(;j<s.length;j++){if(s[j]==='{')d++;else if(s[j]==='}'&&--d===0)break}const r=s.slice(i+1,j);i=j+1;return r};
+ const grp=()=>{if(s[i]==='{'){i++;const r=seq('}');i++;return r}return atom(s[i++]||'')};
+ function seq(end){let o='';while(i<s.length&&s[i]!==end){const c=s[i++];
+  if(c==='\\'){const m=/^[a-zA-Z]+/.exec(s.slice(i));if(!m){o+=esc(s[i++]||'');continue}i+=m[0].length;const n=m[0];
+   if(n==='frac'||n==='binom'){const a=grp(),b=grp(),bn=n==='binom';o+=(bn?'(':'')+'<span class="fr'+(bn?' nb':'')+'"><span>'+a+'</span><span>'+b+'</span></span>'+(bn?')':'')}
+   else if(n==='sqrt'||n==='overline')o+=(n==='sqrt'?'√':'')+'<span class="sq">'+grp()+'</span>';
+   else if(ACC[n])o+='<span class="acc" data-a="'+ACC[n]+'">'+grp()+'</span>';
+   else if(n==='text')o+='<span class="tx">'+esc(raw())+'</span>';
+   else if(n==='mathbb')o+=raw().split('').map(x=>BB[x]||x).join('');
+   else if(n==='mathbf')o+='<b>'+grp()+'</b>';
+   else if(n==='v')o+=xs(raw());
+   else if(/^[pb]?matrix$/.test(n))o+='<span class="mx '+n[0]+'"><table>'+raw().split('\\\\').map(r=>'<tr>'+r.split('&').map(x=>'<td>'+math(x.trim())+'</td>').join('')+'</tr>').join('')+'</table></span>';
+   else if(n==='left'||n==='right'){if(s[i]==='.')i++}
+   else if(n==='sum'||n==='prod'||n==='lim'){let lo='',up='';while(s[i]==='_'||s[i]==='^'){const k=s[i++],g=grp();k==='_'?lo=g:up=g}o+='<span class="lm"><span>'+up+'</span><span>'+(n==='lim'?'lim':G[n])+'</span><span>'+lo+'</span></span>'}
+   else if(FN.test(n))o+='<span class="tx">'+n+'</span>';
+   else o+=G[n]||esc(n)}
+  else if(c==='^')o+='<sup>'+grp()+'</sup>';
+  else if(c==='_')o+='<sub>'+grp()+'</sub>';
+  else if(c==='{'){o+=seq('}');i++}
+  else o+=atom(c)}return o}
+ return seq('')}
+
+/* ---------- Simplified CSS ---------- */
+const COL='red orange yellow green blue purple pink gray black white teal navy brown gold tomato skyblue'.split(' ');
+const PR={color:'color',bg:'background',size:'font-size',font:'font-family',align:'text-align',pad:'padding',margin:'margin',radius:'border-radius',border:'border',width:'width',height:'height',opacity:'opacity',space:'letter-spacing'};
+const WORD={big:'font-size:1.5em',huge:'font-size:2.2em',small:'font-size:.8em',bold:'font-weight:700',italic:'font-style:italic',underline:'text-decoration:underline',center:'text-align:center',right:'text-align:right',box:'border:1px solid #8885;padding:10px 14px;border-radius:8px',card:'background:#8881;padding:10px 14px;border-radius:8px'};
+function sty(spec){const o=[];
+ for(const t of spec.split(/[\s,;]+/).filter(Boolean)){
+  const kv=/^([a-z]+)=(.+)$/.exec(t);
+  if(kv){const p=PR[kv[1]];let v=kv[2].replace(/_/g,' ');if(p&&/^[\w#.%()\-, 가-힣@:]+$/.test(v)&&!/url|expression/i.test(v)){v=v.replace(new RegExp('@('+NM+')(?::([a-z%]+))?','g'),(_,n,u)=>u?'calc(var(--'+n+') * 1'+u+')':'var(--'+n+')');o.push(p+':'+v)}}
+  else if(WORD[t])o.push(WORD[t]);
+  else if(COL.includes(t)||/^#[0-9a-f]{3,8}$/i.test(t))o.push('color:'+t)}
+ return o.join(';')}
+
+/* ---------- JS subset (validated, then executed) ---------- */
+const KW=new Set('if else for of let const true false null undefined typeof'.split(' '));
+const GL=new Set('Math Number String Array parseInt parseFloat isNaN range'.split(' '));
+const PW=new Set('length push pop shift unshift join slice splice includes indexOf reverse sort concat map filter reduce forEach find some every fill keys toFixed toString toUpperCase toLowerCase trim split repeat startsWith endsWith padStart padEnd charAt replace floor ceil round trunc abs min max sqrt pow random sin cos tan log exp sign PI E isInteger from isArray'.split(' '));
+const _k=x=>{if(typeof x!=='number')throw Error(TR('인덱스는 숫자만 쓸 수 있어요'));return x};
+const _r=(a,b)=>{if(b===undefined){b=a;a=0}if(b-a>1e5)throw Error(TR('범위가 너무 커요'));return Array.from({length:Math.max(0,b-a)},(_,i)=>a+i)};
+const ID=new RegExp('^'+NM+'$');
+function compile(src,vars,mode){
+ const s=src.trim(),re=new RegExp('\\s*(\\d+\\.?\\d*|"[^"]*"|\'[^\']*\'|'+NM+'|=>|\\*\\*|[-+*/%<>=!&|?:]+|[(){}\\[\\],.;])','y'),T=[];let m;
+ while(re.lastIndex<s.length){m=re.exec(s);if(!m)throw Error(TR('이해할 수 없는 식: ')+s.slice(re.lastIndex,re.lastIndex+12));T.push(m[1])}
+ const A=new Set();
+ T.forEach((t,k)=>{let n=[];if((t==='let'||t==='const')&&T[k+1])n=[T[k+1]];if(t==='=>'){const p=T[k-1];if(p===')'){for(let j=k-2;j>=0&&T[j]!=='(';j--)n.push(T[j])}else n=[p]}
+  n.filter(x=>ID.test(x)).forEach(x=>{if(x in window||x[0]==='_'||KW.has(x))throw Error(TR('변수 이름으로 쓸 수 없어요: ')+x);A.add(x)})});
+ let o='',hd=-1;const st=[],hs=[];
+ T.forEach((t,k)=>{const p=T[k-1];
+  if(ID.test(t)){
+   if(p==='.'){if(!PW.has(t))throw Error(TR('쓸 수 없는 이름: .')+t);o+=t+' ';return}
+   if(t[0]==='_')throw Error(TR('쓸 수 없는 이름: ')+t);
+   if(t==='for'){const e=T.indexOf('of',k);if(e<0||e>k+6)throw Error(TR('for는 for (const x of 목록) 형태만 쓸 수 있어요'))}
+   if(KW.has(t)||A.has(t)){o+=t+' ';return}
+   if(t in vars){o+='_V.'+t+' ';return}
+   if(GL.has(t)){o+=(t==='range'?'_r':t)+' ';return}
+   throw Error(TR('모르는 이름: ')+t)}
+  if(t==='('){hs.push(p==='if'||p==='for');o+='( ';return}
+  if(t===')'){hd=hs.pop()?k:-1;o+=') ';return}
+  if(t==='['){const ix=!!p&&(ID.test(p)&&!KW.has(p)||p===')'||p===']'||/^["'\d]/.test(p));st.push(ix);o+=ix?'[ _k( ':'[ ';return}
+  if(t===']'){o+=st.pop()?') ] ':'] ';return}
+  if(t.includes('/')){const okp=!!p&&(/^["'\d]/.test(p)||ID.test(p)&&(!KW.has(p)||/^(true|false|null|undefined)$/.test(p))||p===']'||(p===')'&&hd!==k-1));if(!(t==='/'||t==='/=')||!okp)throw Error(TR('/ 는 나눗셈으로만 쓸 수 있어요'))}
+  o+=t+' '});
+ const f=new Function('_V','_k','_r',mode==='expr'?'return ( '+o+'\n)':o+'\n');return()=>f(vars,_k,_r)}
+
+/* ---------- Inline (recursive, nestable parser) ---------- */
+function mend(t,i){if(!t[i+1]||/\s/.test(t[i+1]))return -1;for(let j=i+1;j<t.length;j++){if(t[j]==='\\'){j++;continue}if(t[j]==='$'&&!/\s/.test(t[j-1])&&!/\d/.test(t[j+1]||''))return j+1}return -1}
+function gend(t,i){let k=i+2;while(k<t.length){if(t.startsWith('}}',k))return k+2;const q=skip(t,k);if(q>0)k=q;else if(t[k]==='{'&&t[k+1]!=='{'){const e=t.indexOf('}',k);k=e<0?k+1:e+1}else k++}return -1}
+function skip(t,k){const c=t[k];
+ if(c==='\\')return k+2;
+ if(c==='`'){const j=t.indexOf('`',k+1);return j<0?-1:j+1}
+ if(c==='$')return mend(t,k);
+ if(c==='{'&&t[k+1]==='=')return eend(t,k);
+ if(c==='{'&&t[k+1]==='{')return gend(t,k);
+ return -1}
+function close(t,i,d){for(let k=i;k<t.length;){const q=skip(t,k);if(q>0){k=q;continue}
+ if(d==='*'&&t.startsWith('**',k)){k+=2;continue}
+ if(t.startsWith(d,k)&&(d[0]!=='*'||!/\s/.test(t[k-1]||' '))){if(d==='**')while(t[k+2]==='*')k++;return k}
+ k++}return -1}
+function splitTop(s){const r=[];let b=0;for(let k=0;k<s.length;){const q=skip(s,k);if(q>0){k=q;continue}if(s[k]==='|'){r.push(s.slice(b,k));b=k+1}k++}r.push(s.slice(b));return r}
+const lastBar=s=>{const p=splitTop(s);return p.length>1?s.length-p[p.length-1].length-1:-1};
+function inline(t,c){let o='',i=0;
+ outer:while(i<t.length){const ch=t[i];let j,m;
+  if(ch==='\\'&&i+1<t.length){o+=esc(t[i+1]);i+=2;continue}
+  if(ch==='`'&&(j=t.indexOf('`',i+1))>0){o+='<code>'+esc(t.slice(i+1,j))+'</code>';i=j+1;continue}
+  if(ch==='$'&&(j=mend(t,i))>0){o+='<span class="m">'+math(t.slice(i+1,j-1))+'</span>';i=j;continue}
+  if(ch==='\u0001'){o+='<br>';i++;continue}
+  if(ch==='{'&&t[i+1]==='='&&(j=eend(t,i))>0){o+=xs(t.slice(i+2,j-1));i=j;continue}
+  if(ch==='h'&&(m=/^https?:\/\/[^\s<>"')\]]+/.exec(t.slice(i)))){o+='<a href="'+esc(m[0])+'" target="_blank" rel="noopener">'+esc(m[0])+'</a>';i+=m[0].length;continue}
+  if(ch==='{'&&t[i+1]==='{'&&(j=gend(t,i))>0){const n=t.slice(i+2,j-2),k=lastBar(n);if(k>=0){o+='<span style="'+sty(n.slice(k+1))+'">'+inline(n.slice(0,k),c)+'</span>';i=j;continue}}
+  if(ch==='{'&&(m=new RegExp('^\\{('+NM+')\\}').exec(t.slice(i)))&&m[1] in c.vars){o+='<b class="v" data-v="'+m[1]+'"></b>';i+=m[0].length;continue}
+  for(const [d,g] of [['**','b'],['==','mark'],['~~','s'],['*','i']])if(t.startsWith(d,i)&&t[i+d.length]&&!/\s/.test(t[i+d.length])){const e=close(t,i+d.length,d);if(e>0){o+='<'+g+'>'+inline(t.slice(i+d.length,e),c)+'</'+g+'>';i=e+d.length;continue outer}}
+  if(ch==='['||(ch==='!'&&t[i+1]==='[')){const im=ch==='!',s0=i+(im?2:1),e=close(t,s0,']');
+   if(e>0&&t[e+1]==='('){const p=t.indexOf(')',e+2);if(p>0){const u=t.slice(e+2,p).trim();
+    if(im&&!/\s|"/.test(u)){o+='<img alt="'+esc(t.slice(s0,e)).replace(/"/g,'')+'" src="'+u+'" style="max-width:100%">';i=p+1;continue}
+    if(!im&&/^(https?:|#)[^\s"]*$/.test(u)){o+='<a href="'+u+'" target="_blank" rel="noopener">'+inline(t.slice(s0,e),c)+'</a>';i=p+1;continue}}}}
+  o+=esc(ch);i++}
+ return o}
+
+/* ---------- Blocks ---------- */
+function lst(L,i,c){const re=/^(\s*)([-*]|\d+\.)\s+(.*)$/;let m=re.exec(L[i]);const ind=m[1].length,ol=/\d/.test(m[2]);let h='';
+ while(i<L.length&&(m=re.exec(L[i]))&&m[1].length>=ind){
+  if(m[1].length>ind){const r=lst(L,i,c);h=h.replace(/<\/li>$/,r.h+'</li>');i=r.i;continue}
+  let x=m[3],cb='';const tk=/^\[([ xX])\]\s+(.*)$/.exec(x);if(tk){cb='<input type="checkbox"'+(tk[1]!==' '?' checked':'')+'> ';x=tk[2]}
+  h+='<li>'+cb+inline(x,c)+'</li>';i++}
+ return{h:(ol?'<ol>':'<ul>')+h+(ol?'</ol>':'</ul>'),i}}
+function parse(L,c){let h='',i=0;const P=[];const fl=()=>{if(P.length){h+='<p>'+inline(P.join(' '),c)+'</p>';P.length=0}};
+ const run=f=>{try{f()}catch(e){c.errs.push(e.message)}};
+ while(i<L.length){const t=L[i].trim();let m;
+  if(!t){fl();i++;continue}
+  if(t.startsWith('//')){i++;continue}
+  if(t==='@toc'){fl();h+='<!--toc-->';i++;continue}
+  if(m=/^@if\s+(.+)$/.exec(t)){fl();let d=1,j=i+1;const a=[],b=[];let cur=a;
+   while(j<L.length){const u=L[j].trim();if(/^@if\s/.test(u))d++;else if(u==='@end'&&--d===0)break;else if(u==='@else'&&d===1){cur=b;j++;continue}cur.push(L[j]);j++}
+   h+='<div data-if="'+(c.ifs.push(m[1])-1)+'">'+parse(a,c)+'</div>';if(b.length)h+='<div data-if="'+(c.ifs.push('!('+m[1]+')')-1)+'">'+parse(b,c)+'</div>';i=j+1;continue}
+  if(t==='@style'){fl();i++;while(i<L.length&&L[i].trim()){const r=/^([^:]+):(.+)$/.exec(L[i]);
+    if(r){const sel=r[1].split(',').map(x=>x.trim()).filter(x=>/^[\w\s.#>*\-가-힣]+$/.test(x)).map(x=>'#pv '+x).join(',');if(sel)c.css+=sel+'{'+sty(r[2])+'}\n'}i++}continue}
+  if(m=new RegExp('^@var\\s+('+NM+')\\s*=\\s*(.+)$').exec(t)){fl();run(()=>{c.vars[m[1]]=compile(m[2],c.vars,'expr')()});i++;continue}
+  if(m=/^@button\s+"([^"]*)"\s*:\s*(.+)$/.exec(t)){fl();h+='<button class="b" data-a="'+(c.acts.push(m[2])-1)+'">'+esc(m[1])+'</button>';i++;continue}
+  if(m=new RegExp('^@input\\s+('+NM+')\\s*(?:"([^"]*)")?').exec(t)){fl();if(!(m[1] in c.vars))c.vars[m[1]]='';h+='<p><label>'+esc(m[2]||m[1])+' <input data-i="'+m[1]+'"></label></p>';i++;continue}
+  if(m=/^:::\s*(.*)$/.exec(t)){fl();let d=1,j=i+1;const in_=[];
+    while(j<L.length){const u=L[j].trim();if(/^:::/.test(u)){if(u===':::'){if(--d===0)break}else d++}in_.push(L[j]);j++}
+    h+='<div style="'+sty(m[1])+'">'+parse(in_,c)+'</div>';i=j+1;continue}
+  if(t.startsWith('$$')){fl();let b;if(t.length>3&&t.endsWith('$$')){b=t.slice(2,-2);i++}else{const x=[];i++;while(i<L.length&&L[i].trim()!=='$$')x.push(L[i++]);i++;b=x.join(' ')}
+    h+='<div class="mb">'+math(b)+'</div>';continue}
+  if(t.startsWith('```')){fl();const x=[];i++;while(i<L.length&&!L[i].trim().startsWith('```'))x.push(L[i++]);i++;h+='<pre><code>'+esc(x.join('\n'))+'</code></pre>';continue}
+  if(m=/^(#{1,6})\s+(.*)$/.exec(t)){fl();const id='h-'+m[2].replace(/[^\w가-힣]+/g,'-').toLowerCase().replace(/^-|-$/g,'');c.heads.push([m[1].length,m[2],id]);h+='<h'+m[1].length+' id="'+id+'">'+inline(m[2],c)+'</h'+m[1].length+'>';i++;continue}
+  if(/^-{3,}$/.test(t)){fl();h+='<hr>';i++;continue}
+  if(t[0]==='>'){fl();const x=[];while(i<L.length&&L[i].trim()[0]==='>')x.push(L[i++].trim().replace(/^>\s?/,''));h+='<blockquote>'+parse(x,c)+'</blockquote>';continue}
+  if(/^([-*]|\d+\.)\s+/.test(t)){fl();const r=lst(L,i,c);h+=r.h;i=r.i;continue}
+  if(t[0]==='|'){fl();const rows=[];while(i<L.length&&L[i].trim()[0]==='|')rows.push(L[i++].trim());
+   const cell=r=>splitTop(r.replace(/^\||\|$/g,'')),SP=/^\|?[\s:|-]+\|?$/,al=rows[1]&&SP.test(rows[1])?cell(rows[1]).map(x=>{x=x.trim();return x[0]===':'&&x.slice(-1)===':'?'center':x.slice(-1)===':'?'right':'left'}):[];
+   h+='<table>'+rows.filter(r=>!SP.test(r)).map((r,k)=>'<tr>'+cell(r).map((x,j)=>(k?'<td':'<th')+' style="text-align:'+(al[j]||'left')+'">'+inline(x.trim(),c)+(k?'</td>':'</th>')).join('')+'</tr>').join('')+'</table>';continue}
+  P.push(/\s{2,}$/.test(L[i])||t.endsWith('\\')?t.replace(/\\$/,'')+'\u0001':t);i++}
+ fl();return h}
+
+/* ---------- Runtime ---------- */
+let C;
+const ev=(s,m)=>(C.cache[m+s]||(C.cache[m+s]=compile(s,C.vars,m)))();
+function upd(){const P=$('#pv');
+ for(const k in C.vars)P.style.setProperty('--'+k,C.vars[k]);
+ P.querySelectorAll('.v').forEach(e=>{try{e.textContent=e.dataset.e!==undefined?ev(C.exprs[e.dataset.e],'expr'):C.vars[e.dataset.v]}catch(er){e.textContent='⚠'}});
+ P.querySelectorAll('[data-if]').forEach(e=>{try{e.hidden=!ev(C.ifs[e.dataset.if],'expr')}catch(er){e.hidden=false}})}
+function render(){hl();C={vars:Object.create(null),acts:[],css:'',errs:[],exprs:[],ifs:[],heads:[],cache:{}};
+ let body=parse($('#src').value.split('\n'),C);body=body.replace('<!--toc-->','<ul class="toc">'+C.heads.map(h=>'<li style="margin-left:'+(h[0]-1)*14+'px"><a href="#'+h[2].slice(2)+'">'+esc(h[1])+'</a></li>').join('')+'</ul>');
+ $('#us').textContent=C.css;
+ $('#pv').innerHTML=body+C.errs.map(e=>'<div class="err">⚠ '+esc(e)+'</div>').join('');
+ $('#pv').querySelectorAll('input[data-i]').forEach(e=>e.value=C.vars[e.dataset.i]);
+ upd();
+ $('#code').textContent='<!DOCTYPE html>\n<html><head><meta charset="utf-8"><style>\n'+C.css.replace(/#pv /g,'')+'</style></head><body>\n'+body.replace(/<button[^>]*>.*?<\/button>/g,'').replace(/<input[^>]*>/g,'')+'\n</body></html>\n<!-- 버튼·입력은 정적 HTML에 포함되지 않습니다 -->'}
+$('#pv').addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(!b)return;
+ try{ev(C.acts[b.dataset.a],'stmt');upd();$('#pv').querySelectorAll('input[data-i]').forEach(x=>{if(document.activeElement!==x)x.value=C.vars[x.dataset.i]})}catch(er){alert(er.message)}});
+$('#pv').addEventListener('input',e=>{const n=e.target.dataset.i;if(!n)return;const v=e.target.value;C.vars[n]=v!==''&&!isNaN(v)?Number(v):v;upd()});
+$('#pv').addEventListener('click',e=>{const a=e.target.closest('a[href^="#"]');if(!a)return;e.preventDefault();const t=document.getElementById('h-'+a.getAttribute('href').slice(1));t&&t.scrollIntoView({behavior:'smooth'})});
+$('#src').addEventListener('input',render);
+
+/* ---------- Syntax colors + autocomplete ---------- */
+function paint(s,R){let o='',i=0;
+ while(i<s.length){let best=null;for(const r of R){r.re.lastIndex=i;const m=r.re.exec(s);if(m&&m[0]&&(!best||m.index<best.m.index))best={r,m}}
+  if(!best){o+=esc(s.slice(i));break}
+  const x=best.m[0];o+=esc(s.slice(i,best.m.index))+'<span class="t-'+best.r.cls+'">'+(best.r.sub?paint(x,best.r.sub):esc(x))+'</span>';i=best.m.index+x.length}
+ return o}
+const JR=[{re:/"[^"]*"|'[^']*'/g,cls:'s'},{re:/\b\d+\.?\d*\b/g,cls:'n'},{re:/\b(?:if|else|for|of|let|const|true|false|null|undefined|typeof)\b/g,cls:'k'},{re:/\b(?:Math|Number|String|Array|parseInt|parseFloat|isNaN|range)\b/g,cls:'b'},{re:/\.[A-Za-z]+/g,cls:'m'},{re:/=>|[-+*/%<>=!&|?:]+/g,cls:'o'}];
+const SSR=[{re:/@[\w가-힣]+(?::[a-z%]+)?/g,cls:'vr'},{re:/\b[a-z]+(?==)/g,cls:'cp'},{re:/#[0-9a-fA-F]{3,8}\b|\b(?:red|orange|yellow|green|blue|purple|pink|gray|black|white|teal|navy|brown|gold|tomato|skyblue)\b/g,cls:'cv'},{re:/\b(?:big|huge|small|bold|italic|underline|center|right|box|card)\b/g,cls:'cw'},{re:/-?\d+\.?\d*(?:px|em|rem|%)?/g,cls:'n'}];
+const MR=[{re:/\\v\{[^}]*\}/g,cls:'vr'},{re:/\\[a-zA-Z]+/g,cls:'mc'},{re:/\\\\|[\^_&]/g,cls:'o'},{re:/\d+\.?\d*/g,cls:'n'}];
+const IR=[{re:/`[^`]*`/g,cls:'cd'},{re:/\$\$|\$[^\s$](?:[^$]*[^\s$])?\$/g,cls:'mt',sub:MR},{re:/\{=[^}]*\}/g,cls:'ex',sub:JR},{re:/\{\{[^}]*\|[^}]*\}\}/g,cls:'sp',sub:SSR},{re:/\{[A-Za-z_가-힣][\w가-힣]*\}/g,cls:'vr'},{re:/\*\*[^*]+\*\*/g,cls:'bd'},{re:/==[^=]+==/g,cls:'mk'},{re:/(?<![\w*])\*[^*\s](?:[^*]*[^*\s])?\*(?!\*)/g,cls:'it'},{re:/~~[^~]+~~/g,cls:'dl'},{re:/!?\[[^\]]*\]\([^)]*\)/g,cls:'lk'},{re:/https?:\/\/[^\s<>"')\]]+/g,cls:'lk'}];
+function hlLine(L,S){const t=L.trim(),sp=(c,h)=>'<span class="t-'+c+'">'+h+'</span>';let m;
+ if(S.f){if(t.startsWith('```'))S.f=0;return sp('cd',esc(L))}
+ if(t.startsWith('```')){S.f=1;return sp('cd',esc(L))}
+ if(S.m){if(t==='$$')S.m=0;return sp('mt',paint(L,MR))}
+ if(t.startsWith('$$')){if(!(t.length>3&&t.endsWith('$$')))S.m=1;return sp('mt',paint(L,MR))}
+ if(S.s){if(!t){S.s=0;return ''}return paint(L,[{re:/^[^:]+(?=:)/g,cls:'sl'},...SSR])}
+ if(t.startsWith('//'))return sp('cm',esc(L));
+ if(t==='@style'){S.s=1;return sp('dr',esc(L))}
+ if(t[0]==='@')return paint(L,[{re:/^\s*@\w+/g,cls:'dr'},...JR]);
+ if(t.startsWith(':::'))return paint(L,[{re:/^\s*:::/g,cls:'dr'},...SSR]);
+ if(/^#{1,6}\s/.test(t))return sp('hd',paint(L,IR));
+ if(t[0]==='|')return paint(L,[{re:/\|/g,cls:'ls'},...IR]);
+ if(m=/^(\s*(?:[-*]|\d+\.|>)\s+(?:\[[ xX]\]\s+)?|\s*>)/.exec(L))return sp('ls',esc(m[0]))+paint(L.slice(m[0].length),IR);
+ if(/^-{3,}$/.test(t))return sp('ls',esc(L));
+ return paint(L,IR)}
+function hl(){const S={f:0,m:0,s:0};$('#hl').innerHTML=$('#src').value.split('\n').map(l=>hlLine(l,S)).join('\n')+'\n'}
+
+const LK=(a,k)=>a.map(x=>[x[0],x[1]??x[0],x[2]||'',k]);
+const DIRS=LK([['@var','@var n = 0','변수 선언'],['@button','@button "라벨" : n += 1','버튼'],['@input','@input name "라벨"','입력창'],['@style','@style\n선택자: color=red','스타일 규칙'],['@if','@if n > 0\n$0\n@else\n\n@end','조건 표시'],['@else','@else',''],['@end','@end',''],['@toc','@toc','목차']],'@');
+const SNIP=LK([['table','| 제목1 | 제목2 |\n|---|---|\n| 내용 | 내용 |','표'],['code','```\n$0\n```','코드 블록'],['math','$$ $0 $$','블록 수식'],['task','- [ ] $0','체크리스트'],['link','[$0](https://)','링크'],['image','![$0](주소)','그림'],['box','::: box center\n$0\n:::','박스'],['card','::: card\n$0\n:::','카드'],['quote','> $0','인용'],['bold','**$0**','굵게'],['italic','*$0*','기울임'],['mark','==$0==','형광펜'],['toc','@toc','목차'],['style','@style\nh1: color=tomato center\n','스타일 규칙'],['var','@var n = 0','변수'],['button','@button "라벨" : n += 1','버튼'],['input','@input name "라벨"','입력창']],'S');
+const LSP=[['\\frac','\\frac{$0}{}','분수'],['\\sqrt','\\sqrt{$0}','제곱근'],['\\sum','\\sum_{i=1}^{n} ','합'],['\\prod','\\prod_{i=1}^{n} ','곱'],['\\int','\\int_{a}^{b} ','적분'],['\\lim','\\lim_{x \\to 0} ','극한'],['\\pmatrix','\\pmatrix{$0}','행렬'],['\\bmatrix','\\bmatrix{$0}','행렬'],['\\matrix','\\matrix{$0}','행렬'],['\\text','\\text{$0}','글자'],['\\vec','\\vec{$0}','벡터'],['\\hat','\\hat{$0}',''],['\\bar','\\bar{$0}',''],['\\overline','\\overline{$0}',''],['\\binom','\\binom{$0}{}','조합'],['\\mathbb','\\mathbb{$0}','ℝ ℕ ℤ'],['\\mathbf','\\mathbf{$0}','굵게'],['\\v','\\v{$0}','변수값']];
+const LATEX=LK([...LSP,...Object.keys(G).map(k=>['\\'+k,'\\'+k+' ',G[k]]),...'sin cos tan log ln exp max min det gcd'.split(' ').map(k=>['\\'+k,'\\'+k+' ','함수'])].filter((x,i,a)=>a.findIndex(y=>y[0]===x[0])===i),'Σ');
+const CSSL=LK([...'size=font-size color=color bg=background font=font-family align=text-align pad=padding margin=margin radius=border-radius border=border width=width height=height opacity=opacity space=letter-spacing'.split(' ').map(x=>{const[a,b]=x.split('=');return[a+'=',a+'=',b]}),...'big huge small bold italic underline center right box card'.split(' ').map(w=>[w,w,'스타일']),...COL.map(c=>[c,c,'색'])],'C');
+const JSK=LK([['if','if ($0) {  }','조건문'],['for','for (const x of $0) {  }','반복문'],['let','let ','지역 변수'],['const','const ','상수'],['else','else ',''],['true'],['false'],['null'],['undefined'],['typeof','typeof ','']],'K');
+const GLL=LK('Math Number String Array parseInt parseFloat isNaN range'.split(' ').map(x=>[x,/^[a-z]/.test(x)?x+'($0)':x,'내장']),'ƒ');
+const MATHM=LK('floor ceil round trunc abs min max sqrt pow random sin cos tan log exp sign PI E'.split(' ').map(x=>[x,/^(PI|E)$/.test(x)?x:x+'($0)','Math']),'ƒ');
+const PWL=LK([...PW].filter(x=>!/^(floor|ceil|round|trunc|abs|min|max|sqrt|pow|random|sin|cos|tan|log|exp|sign|PI|E|from|isArray|isInteger)$/.test(x)).map(x=>[x,x==='length'?x:x+'($0)','메서드']),'ƒ');
+const jsCtx=l=>/^\s*@(var|button|if)\b/.test(l)||l.lastIndexOf('{=')>l.lastIndexOf('}')||l.lastIndexOf('\\v{')>l.lastIndexOf('}');
+function inStyle(t,ls){const A=t.slice(0,Math.max(0,ls-1)).split('\n');for(let i=A.length-1;i>=0;i--){if(A[i].trim()==='@style')return true;if(!A[i].trim())return false}return false}
+function cssCtx(t,ls,l){const k=l.lastIndexOf('{{');return /^\s*:::/.test(l)||(inStyle(t,ls)&&l.includes(':'))||(k>=0&&k>l.lastIndexOf('}}')&&l.indexOf('|',k)>=0)}
+function cands(){const ta=$('#src'),t=ta.value,p=ta.selectionStart,ls=t.lastIndexOf('\n',p-1)+1,l=t.slice(ls,p),vs=()=>Object.keys(C.vars).map(k=>[k,k,'변수']);let m;
+ if(m=/\\[a-zA-Z]*$/.exec(l))return{q:m[0],list:LATEX,min:1};
+ const js=jsCtx(l),css=!js&&cssCtx(t,ls,l);
+ if(js&&(m=/([A-Za-z_]\w*)\.([A-Za-z]*)$/.exec(l)))return{q:m[2],list:m[1]==='Math'?MATHM:PWL,min:0};
+ if(css&&(m=/@[\w가-힣]*$/.exec(l)))return{q:m[0],list:LK(vs().map(x=>['@'+x[0],'@'+x[0],'변수']),'V'),min:1};
+ if(m=/^\s*(@\w*)$/.exec(l))return{q:m[1],list:DIRS,min:1};
+ if(!(m=/([A-Za-z_가-힣][\w가-힣]*)$/.exec(l)))return null;
+ return{q:m[1],list:js?[...LK(vs(),'V'),...JSK,...GLL]:css?CSSL:SNIP,min:js||css?1:2}}
+function filt(c){const q=c.q.toLowerCase();if(q.length<c.min)return[];const lo=x=>x[0].toLowerCase();
+ const r=[...c.list.filter(x=>lo(x).startsWith(q)),...c.list.filter(x=>!lo(x).startsWith(q)&&lo(x).includes(q))].slice(0,5);
+ return r.length===1&&r[0][0]===c.q?[]:r}
+const AC={open:false,items:[],sel:0,q:''};
+function acHide(){$('#ac').hidden=true;AC.open=false}
+function acShow(){const ta=$('#src'),box=$('#ac');if(!AC.items.length){acHide();return}
+ box.innerHTML=AC.items.map((x,i)=>'<div class="ai'+(i===AC.sel?' on':'')+'" data-i="'+i+'"><span class="ak">'+esc(x[3])+'</span><span class="al">'+esc(x[0])+'</span><span class="ad">'+esc(TR(x[2]))+'</span></div>').join('');
+ const mir=$('#mir');mir.textContent=ta.value.slice(0,ta.selectionStart);const sp=document.createElement('span');sp.textContent='\u200b';mir.append(sp);
+ box.hidden=false;const ed=$('#ed'),h=box.offsetHeight;let y=sp.offsetTop+24;
+ if(y+h>ed.scrollTop+ed.clientHeight&&sp.offsetTop-h-4>=ed.scrollTop)y=sp.offsetTop-h-4;
+ box.style.left=Math.max(0,Math.min(sp.offsetLeft,$('#edin').clientWidth-box.offsetWidth-4))+'px';box.style.top=y+'px';AC.open=true}
+function acUpdate(){const c=cands();AC.items=c?filt(c):[];AC.q=c?c.q:'';AC.sel=0;acShow()}
+function acAccept(i){const x=AC.items[i];if(!x)return;const ta=$('#src'),p=ta.selectionStart,st=p-AC.q.length,k=x[1].indexOf('$0');
+ ta.setRangeText(x[1].replace('$0',''),st,p,'end');if(k>=0)ta.setSelectionRange(st+k,st+k);acHide();render();ta.focus()}
+$('#src').addEventListener('input',e=>{if(e.inputType&&e.inputType.startsWith('delete')){acHide();return}acUpdate()});
+$('#src').addEventListener('keydown',e=>{if(!AC.open||e.isComposing)return;const n=AC.items.length;
+ if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();AC.sel=(AC.sel+(e.key==='ArrowDown'?1:n-1))%n;acShow()}
+ else if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();acAccept(AC.sel)}
+ else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();acHide()}});
+$('#src').addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key))acHide()});
+$('#src').addEventListener('blur',()=>setTimeout(acHide,150));
+$('#src').addEventListener('click',acHide);
+$('#ac').addEventListener('mousedown',e=>{e.preventDefault();const r=e.target.closest('.ai');if(r)acAccept(+r.dataset.i)});
+$('#ed').addEventListener('mousedown',e=>{if(e.target.id==='ed'){e.preventDefault();$('#src').focus()}});
+
+/* ---------- UI ---------- */
+const ln=p=>{const t=$('#src'),b=t.value.lastIndexOf('\n',t.selectionStart-1)+1;t.setRangeText(p,b,b,'end');t.focus();render()};
+const ins=(a,b,ph)=>{const t=$('#src'),s=t.selectionStart,e=t.selectionEnd,sel=t.value.slice(s,e)||ph;
+ t.setRangeText(a+sel+b,s,e,'end');t.focus();render()};
+let LANG='ko';try{const l=localStorage.getItem('mx-lang');if(l==='en'||l==='ko')LANG=l}catch(e){}
+const EN={"Mixdown 편집기": "Mixdown Editor", "편집": "Edit", "미리보기 열기": "Open preview", "미리보기": "Preview", "문법": "Syntax", "기능": "Feature", "전체화면": "Fullscreen", "전체화면 닫기": "Exit fullscreen", "미리보기 닫기": "Close preview", "내보내기 (.mxd)": "Export (.mxd)", "HTML 내보내기": "Export HTML", "가져오기": "Import", "예제": "Example", "설정": "Settings", "언어": "Language", "테마": "Theme", "화이트": "Light", "다크": "Dark", "정확한 이름 사용": "Use exact names", "닫기": "Close", "버튼 이름을 실제 문법 이름(Markdown, LaTeX, CSS, JS)으로 바꿉니다.": "Show buttons with their real syntax names (Markdown, LaTeX, CSS, JS).", "문서 작성": "Writing", "수학 기호": "Math", "디자인": "Design", "코드": "Code", "굵게": "Bold", "기울임": "Italic", "취소선": "Strike", "링크": "Link", "그림": "Image", "목록": "List", "번호": "Numbered", "인용": "Quote", "표": "Table", "구분선": "Divider", "체크리스트": "Checklist", "하위 목록": "Sub-list", "형광펜": "Highlight", "목차": "TOC", "수식": "Inline math", "블록수식": "Block math", "분수": "Fraction", "제곱근": "Sqrt", "위첨자": "Superscript", "아래첨자": "Subscript", "행렬": "Matrix", "합 Σ": "Sum Σ", "극한": "Limit", "적분": "Integral", "텍스트": "Text", "벡터": "Vector", "변수값": "Var value", "색 글자": "Colored text", "큰 글자": "Big text", "배경 글자": "Highlighted text", "박스": "Box", "카드": "Card", "가운데": "Centered", "스타일": "Style rule", "변수 글자크기": "Var font size", "변수 배경": "Var background", "변수 스타일": "Var style", "코드블록": "Code block", "변수": "Variable", "값 표시": "Show value", "입력": "Input", "버튼": "Button", "주석": "Comment", "조건 @if": "Conditional @if", "식 {= }": "Expression {= }", "배열 변수": "Array variable", "if 버튼": "If button", "반복 버튼": "Loop button", "저장했어요: ": "Saved: ", " 을(를) 불러왔어요": " loaded", "이 화면에서는 파일 저장을 쓸 수 없어요. 내용을 직접 복사해 주세요.": "Saving files is not available here. Please copy the text instead.", "이 환경은 .mxd 확장자 저장을 허용하지 않아 ": "This environment does not allow saving .mxd, so it was saved as ", ".txt 로 저장했어요. 이 제한은 claude.ai 안에서만 있고, 내려받은 HTML 파일로 열면 .mxd로 바로 저장돼요. (또는 저장 후 뒤의 .txt를 지우세요.)": ".txt. This limit only applies inside claude.ai; opened as a downloaded HTML file it saves .mxd directly. (Or remove the trailing .txt.)", "저장하지 못했어요 (": "Could not save (", "오류": "error", "변수 선언": "variable", "버튼 ": "button", "입력창": "input box", "스타일 규칙 ": "style rule", "조건 표시": "conditional", "블록 수식": "block math", "인덱스는 숫자만 쓸 수 있어요": "Array indexes must be numbers", "범위가 너무 커요": "Range is too large", "이해할 수 없는 식: ": "Cannot understand: ", "변수 이름으로 쓸 수 없어요: ": "Not allowed as a variable name: ", "쓸 수 없는 이름: .": "Not allowed: .", "쓸 수 없는 이름: ": "Not allowed name: ", "for는 for (const x of 목록) 형태만 쓸 수 있어요": "Only for (const x of list) loops are supported", "모르는 이름: ": "Unknown name: ", "/ 는 나눗셈으로만 쓸 수 있어요": "/ can only be used for division", "스타일 규칙": "style rule", "코드 블록": "code block", "글자": "text", "조합": "binomial", "함수": "function", "색": "color", "조건문": "if statement", "반복문": "loop", "지역 변수": "local var", "상수": "constant", "내장": "built-in", "메서드": "method", "굵게 ": "bold", "ℝ ℕ ℤ": "ℝ ℕ ℤ", "합": "sum", "곱": "product"};
+const TR=s=>LANG==='en'&&EN[s]||s;
+let PN=false;try{PN=localStorage.getItem('mx-pn')==='1'}catch(e){}
+const PG={'문서 작성':'Markdown','수학 기호':'LaTeX','디자인':'CSS','코드':'JavaScript'};
+const PREC={'H1':'# h1','H2':'## h2','H3':'### h3','굵게':'**strong**','기울임':'*em*','취소선':'~~del~~','링크':'[a](url)','그림':'![img](src)','목록':'- ul','번호':'1. ol','인용':'> blockquote','표':'| table |','구분선':'--- hr','체크리스트':'- [ ] task','하위 목록':'nested ul','형광펜':'==mark==','목차':'@toc','수식':'$inline$','블록수식':'$$display$$','위첨자':'^{sup}','아래첨자':'_{sub}','색 글자':'span: color, font-weight','큰 글자':'span: font-size','배경 글자':'span: background, color','박스':'div: border, padding, radius','카드':'div: background, padding, radius','가운데':'div: text-align:center','스타일':'@style rule','변수 글자크기':'font-size: var(--n)','변수 배경':'background: var(--color)','변수 스타일':'@style + var(--n)','코드':'`code`','코드블록':'```pre```','변수':'@var (state)','값 표시':'{name} binding','입력':'@input (two-way)','버튼':'@button onclick','주석':'// comment','조건 @if':'@if / @else / @end','식 {= }':'{= expression}','배열 변수':'@var Array','if 버튼':'onclick: if / else','반복 버튼':'onclick: for...of'};
+Object.entries({'분수':'frac','제곱근':'sqrt','Σ':'sum','∫':'int','∞':'infty','≤':'le','≥':'ge','≠':'ne','≈':'approx','→':'to','±':'pm','×':'times','÷':'div','α':'alpha','β':'beta','θ':'theta','λ':'lambda','π':'pi','Δ':'Delta','행렬':'pmatrix','합 Σ':'sum_{}^{}','극한':'lim','적분':'int_{}^{}','텍스트':'text','벡터':'vec','변수값':'v{}','ℝ':'mathbb{R}','∈':'in','∂':'partial','∇':'nabla','∀':'forall','∃':'exists','∪':'cup','∩':'cap','⇒':'Rightarrow'}).forEach(([k,v])=>{PREC[k]='\\'+v});
+const sym=n=>()=>ins('\\'+n+' ','','');
+const GR=[
+['문서 작성',[['H1',()=>ln('# ')],['H2',()=>ln('## ')],['H3',()=>ln('### ')],['굵게',()=>ins('**','**','굵게')],['기울임',()=>ins('*','*','기울임')],['취소선',()=>ins('~~','~~','취소')],['링크',()=>ins('[','](https://)','링크')],['그림',()=>ins('![','](주소)','설명')],['목록',()=>ln('- ')],['번호',()=>ln('1. ')],['인용',()=>ln('> ')],['표',()=>ins('\n| 제목1 | 제목2 |\n|---|---|\n| 내용 | 내용 |\n','','')],['구분선',()=>ins('\n---\n','','')],['체크리스트',()=>ln('- [ ] ')],['하위 목록',()=>ln('  - ')],['형광펜',()=>ins('==','==','강조')],['목차',()=>ins('\n@toc\n','','')]]],
+['수학 기호',[['수식',()=>ins('$','$','x^2')],['블록수식',()=>ins('\n$$ ',' $$\n','x = 1')],['분수',()=>ins('\\frac{','}{b}','a')],['제곱근',()=>ins('\\sqrt{','}','x')],['위첨자',()=>ins('^{','}','2')],['아래첨자',()=>ins('_{','}','i')],['Σ',sym('sum')],['∫',sym('int')],['∞',sym('inf')],['≤',sym('le')],['≥',sym('ge')],['≠',sym('ne')],['≈',sym('approx')],['→',sym('to')],['±',sym('pm')],['×',sym('times')],['÷',sym('div')],['α',sym('alpha')],['β',sym('beta')],['θ',sym('theta')],['λ',sym('lambda')],['π',sym('pi')],['Δ',sym('Delta')],['행렬',()=>ins('\\pmatrix{','}','1 & 0 \\\\ 0 & 1')],['합 Σ',()=>ins('\\sum_{i=1}^{n} ','','')],['극한',()=>ins('\\lim_{x \\to 0} ','','')],['적분',()=>ins('\\int_{a}^{b} ','','')],['텍스트',()=>ins('\\text{','}','글')],['벡터',()=>ins('\\vec{','}','v')],['변수값',()=>ins('\\v{','}','n')],['ℝ',()=>ins('\\mathbb{R}','','')],['∈',sym('in')],['∂',sym('partial')],['∇',sym('nabla')],['∀',sym('forall')],['∃',sym('exists')],['∪',sym('cup')],['∩',sym('cap')],['⇒',sym('Rightarrow')]]],
+['디자인',[['색 글자',()=>ins('{{','|red bold}}','글자')],['큰 글자',()=>ins('{{','|big}}','글자')],['배경 글자',()=>ins('{{','|bg=yellow color=black}}','글자')],['박스',()=>ins('\n::: box center\n','\n:::\n','내용')],['카드',()=>ins('\n::: card\n','\n:::\n','내용')],['가운데',()=>ins('\n::: center\n','\n:::\n','내용')],['스타일',()=>ins('\n@style\nh1: color=tomato center\n\n','','')],['변수 글자크기',()=>ins('{{','|size=@n:px}}','글자')],['변수 배경',()=>ins('{{','|bg=@color}}','글자')],['변수 스타일',()=>ins('\n@style\nh1: size=@n:px\n\n','','')]]],
+['코드',[['코드',()=>ins('`','`','code')],['코드블록',()=>ins('\n```\n','\n```\n','코드')],['변수',()=>ins('\n@var n = 0\n','','')],['값 표시',()=>ins('{','}','n')],['입력',()=>ins('\n@input 이름 "입력"\n','','')],['버튼',()=>ins('\n@button "+1" : n = n + 1\n','','')],['주석',()=>ln('// ')],['조건 @if',()=>ins('\n@if n > 0\n','\n@else\n\n@end\n','내용')],['식 {= }',()=>ins('{= ',' }','n * 2')],['배열 변수',()=>ins('\n@var list = [1, 2, 3]\n','','')],['if 버튼',()=>ins('\n@button "실행" : if (n < 10) { n += 1 } else { n = 0 }\n','','')],['반복 버튼',()=>ins('\n@button "합계" : let s = 0; for (const x of list) { s += x }; n = s\n','','')]]]];
+GR.forEach(([name,items])=>{const g=document.createElement('div');g.className='grp';
+ const h=document.createElement('button'),bx=document.createElement('div');h.className='gh';h.dataset.n=name;bx.className='gb';
+ const set=o=>{h.textContent=(o?'▾ ':'▸ ')+(PN?(PG[name]||name):TR(name));bx.hidden=!o;h.setAttribute('aria-expanded',o)};
+ items.forEach(([n,f])=>{const b=document.createElement('button');b.textContent=n;b.dataset.n=n;b.onclick=f;bx.append(b)});
+ h.onclick=()=>set(bx.hidden);set(false);g.append(h,bx);$('#tb').append(g)});
+[['예제',()=>{$('#src').value=SAMPLES[LANG];render()}],['설정',()=>openSet()]]
+ .forEach(([n,f])=>{const b=document.createElement('button');b.textContent=n;b.onclick=f;$('#tb2').append(b)});
+$('#tabs').onclick=e=>{const t=e.target.dataset.t;if(!t)return;
+ document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b===e.target));
+ ['pv','code','help'].forEach(k=>$('#'+k).hidden=k!==t)};
+const HELP_KO=[
+['Markdown','<code># 제목</code> <code>**굵게**</code> <code>*기울임*</code> <code>~~취소~~</code> <code>- 목록</code> <code>1. 번호</code> <code>&gt; 인용</code> <code>---</code> <code>[글](주소)</code> <code>| 표 |</code>'],
+['수식(LaTeX)','<code>$x^2 + y_1$</code> · 블록은 <code>$$ ... $$</code><br>지원: <code>\\frac{a}{b}</code> <code>\\sqrt{x}</code> <code>^</code> <code>_</code> 그리스 문자(<code>\\alpha \\pi \\Sigma</code>…) <code>\\sum \\int \\inf \\times \\le \\ge \\to</code>'],
+['글자 꾸미기(CSS)','<code>{{글자|red big bold}}</code><br>단어: red, blue, #f80, big, huge, small, bold, italic, underline, center, right, box, card<br>값 지정: <code>size=2em bg=yellow pad=8px radius=6px</code>'],
+['영역 꾸미기','<code>::: card center blue</code> … <code>:::</code> (중첩 가능)'],
+['스타일 규칙','<code>@style</code> 다음 줄에 <code>선택자: 속성들</code> (빈 줄에서 끝)<br>예) <code>h1: color=tomato center</code>'],
+['변수·계산(JS)','<code>@var n = 0</code> → 본문에서 <code>{n}</code><br><code>@button "+1" : n = n + 1</code><br><code>@input 이름 "입력"</code><br>식: 숫자, 문자열 "…", 변수, + - * / % 비교, ? :'],
+['섞어 쓰기','자유롭게 중첩: <code>**굵게 $x^2$**</code> <code>{{**굵게** {n}|red}}</code> <code>[$\\pi$](주소)</code> 표 안에서도 가능<br>기호 그대로 쓰기: <code>\\$</code> <code>\\*</code> <code>\\{</code>'],
+['JS (부분집합)','<code>@var list = [1,2]</code> · <code>@button "라벨" : 문장; 문장</code> (if/else, <code>for (const x of 목록)</code>, let/const, += ++, 화살표 함수, Math.*, 배열·문자열 메서드, <code>range(0,5)</code>) · <code>{= 식}</code> 본문에 값 표시 · <code>@if 식</code> … <code>@else</code> … <code>@end</code><br>안 되는 것: while, 고전 for, 함수 선언, new, 객체 리터럴, DOM 접근'],
+['CSS ↔ 변수','<code>size=@n:px</code> (변수 n을 px로) · <code>bg=@color</code> · <code>@style</code> 안에서도 사용. 변수가 바뀌면 스타일도 바로 바뀜'],
+['추가 Markdown','<code>- [x]</code> 체크리스트 · 들여쓰기 하위 목록 · <code>==형광펜==</code> · <code>@toc</code> 목차 · <code>[글](#제목)</code> · 표 정렬 <code>:---:</code> · 줄 끝 공백 2개로 줄바꿈 · 주소 자동 링크'],
+['추가 수식','<code>\\pmatrix{a & b \\\\ c & d}</code> (<code>matrix</code> <code>bmatrix</code>) <code>\\sum_{i=1}^{n}</code> <code>\\lim_{x \\to 0}</code> <code>\\text{글}</code> <code>\\vec{v}</code> <code>\\hat{x}</code> <code>\\overline{x}</code> <code>\\binom{n}{k}</code> <code>\\mathbb{R}</code> <code>\\v{변수나 식}</code>(살아있는 값)'],
+['주석','<code>// 한 줄 주석</code>']
+];
+const HELP_EN=[['Markdown','<code># heading</code> <code>**bold**</code> <code>*italic*</code> <code>~~strike~~</code> <code>- list</code> <code>1. number</code> <code>&gt; quote</code> <code>---</code> <code>[text](url)</code> <code>| table |</code>'],
+['Math (LaTeX)','<code>$x^2 + y_1$</code> · block: <code>$$ ... $$</code><br>Supports <code>\\frac{a}{b}</code> <code>\\sqrt{x}</code> <code>^</code> <code>_</code> Greek letters (<code>\\alpha \\pi \\Sigma</code>…) <code>\\sum \\int \\inf \\times \\le \\ge \\to</code>'],
+['Text styling (CSS)','<code>{{text|red big bold}}</code><br>Words: red, blue, #f80, big, huge, small, bold, italic, underline, center, right, box, card<br>Values: <code>size=2em bg=yellow pad=8px radius=6px</code>'],
+['Block styling','<code>::: card center blue</code> … <code>:::</code> (nestable)'],
+['Style rules','<code>@style</code>, then <code>selector: properties</code> lines (ends at a blank line)<br>e.g. <code>h1: color=tomato center</code>'],
+['Mixing','Nest freely: <code>**bold $x^2$**</code> <code>{{**bold** {n}|red}}</code> <code>[$\\pi$](url)</code>, also inside tables<br>Literal symbols: <code>\\$</code> <code>\\*</code> <code>\\{</code>'],
+['JS (subset)','<code>@var list = [1,2]</code> · <code>@button "label" : stmt; stmt</code> (if/else, <code>for (const x of list)</code>, let/const, += ++, arrow functions, Math.*, array &amp; string methods, <code>range(0,5)</code>) · <code>{= expr}</code> shows a value · <code>@if expr</code> … <code>@else</code> … <code>@end</code> · <code>@input name "label"</code><br>Not allowed: while, classic for, function declarations, new, object literals, DOM access'],
+['CSS ↔ variables','<code>size=@n:px</code> (variable n in px) · <code>bg=@color</code> · also inside <code>@style</code>. When a variable changes, the style updates instantly'],
+['More Markdown','<code>- [x]</code> task lists · indented sub-lists · <code>==highlight==</code> · <code>@toc</code> table of contents · <code>[text](#heading)</code> · table alignment <code>:---:</code> · two trailing spaces for a line break · auto-links'],
+['More math','<code>\\pmatrix{a & b \\\\ c & d}</code> (<code>matrix</code> <code>bmatrix</code>) <code>\\sum_{i=1}^{n}</code> <code>\\lim_{x \\to 0}</code> <code>\\text{text}</code> <code>\\vec{v}</code> <code>\\hat{x}</code> <code>\\overline{x}</code> <code>\\binom{n}{k}</code> <code>\\mathbb{R}</code> <code>\\v{variable or expr}</code> (live value)'],
+['Comment','<code>// one-line comment</code>']];
+function buildHelp(){$('#help').innerHTML='<table><tr><th>'+TR('기능')+'</th><th>'+TR('문법')+'</th></tr>'+(LANG==='en'?HELP_EN:HELP_KO).map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+'</table>'}
+buildHelp();
+
+const SAMPLE=['// Mixdown 예제','@style','h1: color=tomato center','h2: color=teal','','# Mixdown에 오신 것을 환영합니다','','**Markdown**과 *간결한 LaTeX*, CSS, 약간의 JS를 한 문서에서 씁니다.','','## 수식','','인라인: $E = mc^2$, 그리고 $\\alpha + \\beta_1 \\le \\pi$','','$$ x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} $$','','## 꾸미기','','{{빨간 큰 글씨|red big bold}} 와 {{노란 배경|bg=yellow color=black pad=2px}}','','::: card center','영역 전체를 꾸밀 수 있어요.',':::','','## 계산','','@var n = 0','@var 이름 = "친구"','@input 이름 "이름 입력"','','안녕하세요, {이름}님! 버튼을 {n}번 눌렀어요.','','@button "+1" : n = n + 1','@button "x2" : n = n * 2','@button "초기화" : n = 0','','## 섞어 쓰기','','**굵게 안의 수식 $\\alpha^2$ 와 `코드`**, {{**굵은 빨강** 과 $\\frac{1}{2}$|red}}, {{현재 값 {n}|blue big}}','','[$\\pi$ 링크](https://example.com) 와 \\$5 처럼 기호는 이스케이프','','| 수식 | 꾸밈 |','|---|---|','| $x^2$ | {{빨강|red bold}} |','','## 고급','','@var size = 20','@var list = [1, 2, 3]','','{{크기가 변하는 글자|size=@size:px color=blue bold}}','','@button "키우기" : size += 4','@button "줄이기" : size = Math.max(8, size - 4)','@button "합계" : n = 0; for (const x of list) { n += x }','','크기 {size}px, 두 배는 {= size * 2}, 길이 {= list.length}, 변환 {= list.map(x => x * 2).join(", ")}','','@if size > 30','::: card','글자가 30px보다 커졌어요!',':::','@else','아직 작아요.','@end','','수식에 변수: $x = \\v{size}^2 + \\sum_{i=1}^{n} i$','','$$ A = \\pmatrix{1 & 2 \\\\ 3 & 4}, \\quad \\lim_{x \\to 0} \\frac{\\sin x}{x} = 1 $$','','- [x] 체크리스트','- [ ] 두 번째','  - 하위 항목 ==형광펜==','','> 인용문도 됩니다.','','| 기능 | 상태 |','|---|---|','| 표 | 지원 |','','- 목록 하나','- 목록 둘'].join('\n');
+let DL=null;try{if(window.claude&&claude.use)claude.use('downloads').then(d=>{DL=d}).catch(()=>{})}catch(e){}
+const note=m=>{let e=$('#note');if(!e){e=document.createElement('div');e.id='note';e.style.cssText='font-size:13px;color:var(--mu);flex-basis:100%';$('#tb2').after(e)}e.textContent=m};
+const fname=()=>((/^#\s+(.+)$/m.exec($('#src').value)||[])[1]||'document').replace(/[^\w\- 가-힣]/g,'').trim().slice(0,40)||'document';
+async function save(name,data){
+ if(!DL){if(window.top===window){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/plain;charset=utf-8'}));a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);note(TR('저장했어요: ')+name)}else note(TR('이 화면에서는 파일 저장을 쓸 수 없어요. 내용을 직접 복사해 주세요.'));return}
+ try{await DL.save({filename:name,data});note(TR('저장했어요: ')+name)}
+ catch(e){if(e.code==='declined')return;
+  if(e.code==='rejected_extension'&&name.endsWith('.mxd')){try{await DL.save({filename:name+'.txt',data});note(TR('이 환경은 .mxd 확장자 저장을 허용하지 않아 ')+name+TR('.txt 로 저장했어요. 이 제한은 claude.ai 안에서만 있고, 내려받은 HTML 파일로 열면 .mxd로 바로 저장돼요. (또는 저장 후 뒤의 .txt를 지우세요.)'));return}catch(e2){if(e2.code==='declined')return}}
+  note(TR('저장하지 못했어요 (')+(e.code||TR('오류'))+')')}}
+function importFile(){imp.click()}
+const imp=document.createElement('input');imp.type='file';imp.accept='.mxd,.txt,text/plain';imp.hidden=true;document.body.append(imp);
+imp.onchange=async()=>{const f=imp.files[0];if(f){$('#src').value=await f.text();render();note(f.name+TR(' 을(를) 불러왔어요'))}imp.value=''};
+[['내보내기 (.mxd)',()=>save(fname()+'.mxd',$('#src').value)],['HTML 내보내기',()=>save(fname()+'.html',$('#code').textContent)],['가져오기',()=>importFile()]].forEach(([n,f])=>{const b=document.createElement('button');b.textContent=n;b.onclick=f;$('#tbt').append(b)});
+const setTheme=t=>{document.documentElement.dataset.theme=t;try{localStorage.setItem('mx-theme',t)}catch(e){}};
+try{const t=localStorage.getItem('mx-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}
+const dlg=document.createElement('div');dlg.id='dlg';dlg.hidden=true;
+function buildDlg(){dlg.innerHTML='<div class="box" role="dialog" aria-label="'+TR('설정')+'"><h2>'+TR('설정')+'</h2><div class="row"><span>'+TR('언어')+'</span><select id="lg"><option value="ko">한국어</option><option value="en">English</option></select></div><div class="row" style="margin-top:12px"><span>'+TR('테마')+'</span><label><input type="radio" name="th" value="light"> '+TR('화이트')+'</label><label><input type="radio" name="th" value="dark"> '+TR('다크')+'</label></div><div class="row" style="margin-top:12px"><label><input type="checkbox" id="pn"> '+TR('정확한 이름 사용')+'</label></div><div class="hint">'+TR('버튼 이름을 실제 문법 이름(Markdown, LaTeX, CSS, JS)으로 바꿉니다.')+'</div><div class="act"><button id="dx">'+TR('닫기')+'</button></div></div>'}
+buildDlg();
+document.body.append(dlg);
+function syncDlg(){const cur=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');dlg.querySelectorAll('input[name=th]').forEach(r=>{r.checked=r.value===cur});dlg.querySelector('#lg').value=LANG;dlg.querySelector('#pn').checked=PN}
+function openSet(){syncDlg();dlg.hidden=false}
+function applyLang(){document.documentElement.lang=LANG;
+ document.querySelectorAll('header h1,.tabs>button,#tbt button,#tb2 button,#cls').forEach(e=>{const k=e.dataset.k||(e.dataset.k=e.textContent);e.textContent=TR(k)});
+ $('#fsb').textContent=TR($('#pvcol').classList.contains('fs')?'전체화면 닫기':'전체화면');applyNames();buildHelp()}
+function setLang(l){const old=LANG,src=$('#src');LANG=l;try{localStorage.setItem('mx-lang',l)}catch(e){}if(src.value===SAMPLES[old])src.value=SAMPLES[l];buildDlg();syncDlg();applyLang();render()}
+dlg.addEventListener('change',e=>{if(e.target.name==='th')setTheme(e.target.value);if(e.target.id==='lg')setLang(e.target.value);if(e.target.id==='pn'){PN=e.target.checked;try{localStorage.setItem('mx-pn',PN?'1':'0')}catch(x){}applyNames()}});
+function applyNames(){document.querySelectorAll('#tb .gb button').forEach(b=>{const n=b.dataset.n;b.textContent=PN?(PREC[n]||n):TR(n)});document.querySelectorAll('#tb .gh').forEach(h=>{const n=h.dataset.n;h.textContent=h.textContent.slice(0,2)+(PN?(PG[n]||n):TR(n))})}
+applyNames();applyLang();
+dlg.addEventListener('click',e=>{if(e.target===dlg||e.target.id==='dx')dlg.hidden=true});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!dlg.hidden)dlg.hidden=true});
+const col=$('#pvcol'),mn=document.querySelector('main');
+$('#cls').onclick=()=>{col.classList.remove('fs');$('#fsb').textContent=TR('전체화면');mn.classList.add('nopv')};
+$('#opn').onclick=()=>mn.classList.remove('nopv');
+$('#fsb').onclick=()=>{const f=col.classList.toggle('fs');$('#fsb').textContent=TR(f?'전체화면 닫기':'전체화면')};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&col.classList.contains('fs'))$('#fsb').click()});
+const SAMPLE_EN="// Mixdown example\n@style\nh1: color=tomato center\nh2: color=teal\n\n# Welcome to Mixdown\n\n**Markdown** blends *simplified LaTeX*, CSS and a bit of JS in one document.\n\n## Math\n\nInline: $E = mc^2$, and $\\alpha + \\beta_1 \\le \\pi$\n\n$$ x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} $$\n\n## Styling\n\n{{Big red text|red big bold}} and {{yellow background|bg=yellow color=black pad=2px}}\n\n::: card center\nWhole blocks can be styled too.\n:::\n\n## Calculation\n\n@var n = 0\n@var name = \"friend\"\n@input name \"Type your name\"\n\nHello, {name}! You pressed the button {n} times.\n\n@button \"+1\" : n = n + 1\n@button \"x2\" : n = n * 2\n@button \"Reset\" : n = 0\n\n## Mixing\n\n**Math $\\alpha^2$ and `code` inside bold**, {{**bold red** and $\\frac{1}{2}$|red}}, {{current value {n}|blue big}}\n\n[$\\pi$ link](https://example.com) and an escaped symbol like \\$5\n\n| Math | Styling |\n|---|---|\n| $x^2$ | {{red|red bold}} |\n\n## Advanced\n\n@var size = 20\n@var list = [1, 2, 3]\n\n{{Text that changes size|size=@size:px color=blue bold}}\n\n@button \"Grow\" : size += 4\n@button \"Shrink\" : size = Math.max(8, size - 4)\n@button \"Sum\" : n = 0; for (const x of list) { n += x }\n\nSize {size}px, double is {= size * 2}, length {= list.length}, mapped {= list.map(x => x * 2).join(\", \")}\n\n@if size > 30\n::: card\nThe text grew past 30px!\n:::\n@else\nStill small.\n@end\n\nVariable in math: $x = \\v{size}^2 + \\sum_{i=1}^{n} i$\n\n$$ A = \\pmatrix{1 & 2 \\\\ 3 & 4}, \\quad \\lim_{x \\to 0} \\frac{\\sin x}{x} = 1 $$\n\n- [x] Checklist\n- [ ] Second item\n  - Sub-item ==highlight==\n\n> Blockquotes work too.\n\n| Feature | Status |\n|---|---|\n| Table | Supported |\n\n- List item one\n- List item two";
+const SAMPLES={ko:SAMPLE,en:SAMPLE_EN};
+$('#src').value=SAMPLES[LANG];render();
+
+/* ---------- Desktop app integration (Qt WebChannel) ---------- */
+(function(){
+ if(!(window.qt&&qt.webChannelTransport&&window.QWebChannel))return;
+ new QWebChannel(qt.webChannelTransport,function(ch){
+  const B=ch.objects.bridge;let CUR='';
+  const call=(m,...a)=>new Promise(r=>B[m](...a,r));
+  const parse=s=>{try{return s?JSON.parse(s):null}catch(e){return null}};
+  const title=n=>{document.title=(n?n+' - ':'')+'Mixdown'};
+  const load=d=>{if(!d)return;CUR=d.path;$('#src').value=d.text;render();title(d.name);note(d.name+TR(' 을(를) 불러왔어요'))};
+  const put=async(name,data,saveAs)=>{const ext=name.split('.').pop();const r=parse(await call('saveFile',data,name,ext,ext==='mxd'?CUR:'',!!saveAs));if(r){if(ext==='mxd'){CUR=r.path;title(r.name)}note(TR('저장했어요: ')+r.name)}};
+  importFile=async()=>load(parse(await call('openFile')));
+  save=(name,data)=>put(name,data,true);
+  B.menuAction.connect(a=>{const v=$('#src').value;
+   if(a==='open')importFile();
+   else if(a==='save')put(fname()+'.mxd',v,false);
+   else if(a==='saveas')put(fname()+'.mxd',v,true);
+   else if(a==='html')put(fname()+'.html',$('#code').textContent,true)});
+  B.fileOpened.connect(s=>load(parse(s)));
+  call('initialFile').then(s=>load(parse(s)));
+ });
+})();
+</script>
+</body>
+</html>
