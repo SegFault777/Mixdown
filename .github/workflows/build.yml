@@ -88,7 +88,9 @@ jobs:
       - name: Build
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"
-        run: ./build.sh all
+        run: |
+          chmod +x build.sh
+          ./build.sh all
       - uses: actions/upload-artifact@v4
         with:
           name: Mixdown-linux
