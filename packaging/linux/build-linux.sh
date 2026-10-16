@@ -53,7 +53,7 @@ cp -a $STAGE/. %{buildroot}/
 /usr/share/mime/packages/mixdown.xml
 /usr/share/icons/hicolor/512x512/apps/mixdown.png
 SPEC
-  rpmbuild --define "_topdir $T" --define "debug_package %{nil}" -bb "$T/SPECS/mixdown.spec"
+  QA_RPATHS=63 rpmbuild --define "_topdir $T" --define "debug_package %{nil}" --define "_build_id_links none" -bb "$T/SPECS/mixdown.spec"
   cp "$T"/RPMS/*/mixdown-*.rpm "$DIST/"
 }
 
@@ -62,6 +62,8 @@ make_appimage() {
   curl -L -o linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
   curl -L -o linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
   chmod +x linuxdeploy linuxdeploy-plugin-qt
+  export PATH="$A:$PATH"                                   # linuxdeploy looks for its plugins on PATH
+  export APPIMAGE_EXTRACT_AND_RUN=1                        # works without FUSE (CI, containers)
   export QMAKE="$(command -v "$QMAKE")" VERSION OUTPUT="Mixdown-$VERSION-x86_64.AppImage"
   export EXTRA_QT_MODULES="webenginewidgets;webchannel"   # may be unnecessary depending on the plugin version
   ./linuxdeploy --appdir AppDir --plugin qt \
